@@ -1,25 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/task_provider.dart';
+import 'package:todo_list_app/Model/priority_model.dart';
 
 class AddEditTaskScreen extends StatefulWidget {
-  final String? task;
+  final Task? task;
 
   const AddEditTaskScreen({super.key, this.task});
 
   @override
-  AddEditTaskScreenState createState() => AddEditTaskScreenState();
+  // ignore: library_private_types_in_public_api
+  _AddEditTaskScreenState createState() => _AddEditTaskScreenState();
 }
 
-class AddEditTaskScreenState extends State<AddEditTaskScreen> {
+class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _taskController = TextEditingController();
+  String _title = '';
+  String _description = '';
+  TaskPriority _selectedPriority = TaskPriority.low;
 
   @override
   void initState() {
     super.initState();
     if (widget.task != null) {
-      _taskController.text = widget.task!;
+      _title = widget.task!.title;
+      _description = widget.task!.description;
+      _selectedPriority = widget.task!.priority;
     }
   }
 
@@ -27,13 +31,7 @@ class AddEditTaskScreenState extends State<AddEditTaskScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF000080),
-        title: Text(widget.task == null ? 'Add Task' : 'Edit Task',
-        style: const TextStyle(color: Colors.white),
-        ),
-        iconTheme: const IconThemeData(
-          color: Colors.white, // Change the color of the back arrow icon to white
-        ),
+        title: Text(widget.task == null ? 'Add Task' : 'Edit Task'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -42,46 +40,52 @@ class AddEditTaskScreenState extends State<AddEditTaskScreen> {
           child: Column(
             children: [
               TextFormField(
-                controller: _taskController,
-                decoration: const InputDecoration(labelText: 'Task'),
+                initialValue: _title,
+                decoration: const InputDecoration(labelText: 'Task Title'),
+                onChanged: (value) => _title = value,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter a task';
+                    return 'Please enter a title';
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              TextFormField(
+                initialValue: _description,
+                decoration: const InputDecoration(labelText: 'Task Description'),
+                onChanged: (value) => _description = value,
+              ),
+              DropdownButton<TaskPriority>(
+                value: _selectedPriority,
+                onChanged: (TaskPriority? newValue) {
+                  setState(() {
+                    _selectedPriority = newValue!;
+                  });
+                },
+                items: TaskPriority.values.map((TaskPriority priority) {
+                  return DropdownMenuItem<TaskPriority>(
+                    value: priority,
+                    child: Text(priority.toString().split('.').last.toUpperCase()),
+                  );
+                }).toList(),
+              ),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    if (widget.task == null) {
-                      Provider.of<TaskProvider>(context, listen: false).addTask(_taskController.text);
-                    } else {
-                      int index = Provider.of<TaskProvider>(context, listen: false).getTaskIndex(widget.task!);
-                      if (index != -1) {
-                        Provider.of<TaskProvider>(context, listen: false).updateTask(index, _taskController.text);
-                      }
-                    }
-                    Navigator.pop(context);
+                    final task = Task(
+                      title: _title,
+                      description: _description,
+                      priority: _selectedPriority,
+                    );
+                    Navigator.pop(context, task); // Pass back the new task
                   }
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF000080),
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Save'),
+                child: Text(widget.task == null ? 'Add Task' : 'Save Task'),
               ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _taskController.dispose();
-    super.dispose();
   }
 }
